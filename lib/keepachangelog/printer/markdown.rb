@@ -20,9 +20,18 @@ module Keepachangelog
 
     private
 
+    def sort?
+      should_sort = options.has_key?(:sort) ? options[:sort] : true
+    end
+
+    def sort(object)
+      sort? ? object.sort : object
+    end
+
     def parse_versions(versions)
-      versions.sort { |a, b| compare_versions(a[0], b[0]) }
-              .reverse_each.map { |k, v| version(k, v) }
+      sorted = sort(versions) { |a, b| compare_versions(a[0], b[0]) }
+      sorted = sorted.reverse_each if sort?
+      sorted.map { |k, v| version(k, v) }
     end
 
     def compare_versions(a, b)
@@ -53,7 +62,7 @@ module Keepachangelog
     def version(header, content)
       [
         version_header(header, content['date']),
-        content['changes'].sort { |a, b| compare_sections(a[0], b[0]) }
+        sort(content['changes']) { |a, b| compare_sections(a[0], b[0]) }
                           .map { |k, v| section(k, v) }
       ]
     end
@@ -61,14 +70,14 @@ module Keepachangelog
     def section(header, content)
       [
         "### #{header}",
-        content.sort.map { |c| change(c) },
+        sort(content).map { |c| change(c) },
         ''
       ]
     end
 
     def anchors
       return nil unless options[:url]
-      v = versions.keys.sort { |a, b| compare_versions(a, b) }.reverse
+      v = sort(versions.keys) { |a, b| compare_versions(a, b) }.reverse
       (0..v.length - 1).map { |i| anchor(v, i) }
     end
 
